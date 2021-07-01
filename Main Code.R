@@ -8,7 +8,9 @@
   library(cluster)
   library(factoextra)
   library(corrgram)
+  library(NbClust)
 }
+
 
 read.csv("C://RRR/19bat.csv",sep = "\t") -> bat19  #csv檔用Tab分隔的話，以\t輸入
 head(bat19)
@@ -95,6 +97,12 @@ k3all  <- cbind(k3,bat19)
 #agnes法
 hc2 <- agnes(E.dist, method = "ward")
 hc2$ac #agnes可以計算聚合係數(agglomerative coefficient)
+
+#Stopping Rule
+stop_num <- NbClust(clearbat19, distance = "euclidean", method = "ward.D2", max.nc = 6, index = "all")
+stop_num
+#根據NbClust的數種Stopping Rule的Index顯示，3個分群應該是最好的選擇
+
 
 #scatter plot matrix 整套
 {
