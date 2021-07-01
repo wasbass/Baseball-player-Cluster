@@ -5,6 +5,9 @@
   library(ggplot2)
   library(GGally)
   library(tidyverse)
+  library(cluster)
+  library(factoextra)
+  library(corrgram)
 }
 
 read.csv("C://RRR/19bat.csv",sep = "\t") -> bat19  #csv檔用Tab分隔的話，以\t輸入
@@ -38,6 +41,28 @@ mh19 %>%
   arrange(desc(mh)) %>% #由大到小列出mh的值,變數有8個，自由度為8，以3.5為閥值，3.5*8=28 (3.5*6=21)
   filter(mh>28)         #共有6個人，視為潛在離群值(99低打高長,371看不出,281盜壘最多,116看不出,315盜壘第二,424會轟會盜)
 
+
+
+daisy(clearbat19 , stand = T) -> daisy19
+class(daisy19)
+
+df <- scale(clearbat19)
+res = get_clust_tendency(df, 40, graph = TRUE)
+res$hopkins_stat
+
+#用主成分分析的頭兩個主成分，來判斷集群分析是否有效，並且驗證分群結果的好壞
+fviz_pca_ind(prcomp(df), title = "PCA - clearbat19", palette = "jco",
+             geom = "point", ggtheme = theme_classic(), habillage = k3data$k3, #habillage可用來標色
+             legend = "bottom")
+
+#接著用k-means來觀察分類狀況
+km.res1 <- kmeans(df, 3)
+fviz_cluster(list(data = df, cluster = km.res1$cluster),
+             ellipse.type = "norm", geom = "point", stand = FALSE,
+             palette = "jco", ggtheme = theme_classic())
+
+#(要跑很久)
+#///fviz_dend(hclust(dist(df)), k = 3, k_colors = "jco", as.ggplot = TRUE, show_labels = FALSE)
 
 #依距離作區分原則
 
