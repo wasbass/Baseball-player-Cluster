@@ -33,22 +33,16 @@ c2bat19    <- bat19[,c(4,11,14,15,16,      20)]
 corrgram(clearbat19)
 pairs(clearbat19) #///lower.panel = NULL
 corrgram(c2bat19) #拿掉17,18看起來比較好
+#可以考慮用因素分析來拿掉高度線性相關的變數
 
-#用馬哈蘭距離(D^2)來偵測outlier
+#用馬哈蘭距離(D^2)來偵測outlier(會用到變異數和共變數)
 mh <- as.numeric(mahalanobis(clearbat19, colMeans(clearbat19), cov(clearbat19))) #以每個變數的平均數和共變矩陣為參數
 mh19 <- mutate(clearbat19,mh)
 mh19 %>%
   arrange(desc(mh)) %>% #由大到小列出mh的值,變數有8個，自由度為8，以3.5為閥值，3.5*8=28 (3.5*6=21)
   filter(mh>28)         #共有6個人，視為潛在離群值(99低打高長,371看不出,281盜壘最多,116看不出,315盜壘第二,424會轟會盜)
 
-
-
-daisy(clearbat19 , stand = T) -> daisy19
-class(daisy19)
-
 df <- scale(clearbat19)
-res = get_clust_tendency(df, 40, graph = TRUE)
-res$hopkins_stat
 
 #用主成分分析的頭兩個主成分，來判斷集群分析是否有效，並且驗證分群結果的好壞
 fviz_pca_ind(prcomp(df), title = "PCA - clearbat19", palette = "jco",
@@ -64,10 +58,32 @@ fviz_cluster(list(data = df, cluster = km.res1$cluster),
 #(要跑很久)
 #///fviz_dend(hclust(dist(df)), k = 3, k_colors = "jco", as.ggplot = TRUE, show_labels = FALSE)
 
-#依距離作區分原則
+#用Hopkins統計量來判斷集群是否明顯存在
+#見https://www.datanovia.com/en/lessons/assessing-clustering-tendency/
+#數值越大代表Data的分布跟Uniform分配相比，有較明顯的集群存在(若>0.75，則有90%的信心水準)
 
+res = get_clust_tendency(df, n = 40, graph = TRUE) #n代表挑選的sample數量 
+res$hopkins_stat #為0.73，高於閥值0.4，可接受集群存在
+
+#圖示判斷法
+bat.dist <- get_dist(clearbat19, stand = TRUE, method = "euclidean")
+#或是用daisy(clearbat19 , stand = T), get_dist可調用參數比較多
+
+fviz_dist(dist.obj = bat.dist , order = T ,    #order會使相近的data排在一起，紅色代表彼此的相似程度越高
+          gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+#並非隨機分布，代表集群有可能存在，但並不明顯
+
+class(bat.dist)
+order(bat.dist) %>%
+  head()
+
+head(bat.dist)
+
+
+#依距離作區分原則的階層式集群分析
 E.dist <- dist(clearbat19,method = "euclidean") #這邊用歐式距離當標準，也可以用manhattan等方法
-h.cluster <- hclust(E.dist , method = "ward.D2") #也可以用其他方法，像是最小距離、平均距離等，這邊用華德D2
+h.cluster <- hclust(E.dist , method = "ward.D2") #也可以用其他方法，像是最小距離、平均距離等
+#這邊用華德D2，會讓分群結果中，每一群的數量偏向更多
 #///par(mfrow = c(1,2))
 #///plot(h.cluster, xlab="歐式距離")
 
@@ -75,6 +91,10 @@ k3 <- as.character(cutree(h.cluster , k = 3))
 
 k3data <- cbind(k3,clearbat19)
 k3all  <- cbind(k3,bat19)
+
+#agnes法
+hc2 <- agnes(E.dist, method = "ward")
+hc2$ac #agnes可以計算聚合係數(agglomerative coefficient)
 
 #scatter plot matrix 整套
 {
