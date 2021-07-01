@@ -11,7 +11,6 @@
   library(NbClust)
 }
 
-
 read.csv("C://RRR/19bat.csv",sep = "\t") -> bat19  #csv檔用Tab分隔的話，以\t輸入
 head(bat19)
 
@@ -150,4 +149,3 @@ k3data %>%
   tally() #各組人數
 
 #結論:第一組為普通人，第二組很會轟，第三組很會盜
-
