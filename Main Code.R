@@ -51,19 +51,6 @@ k3 <- as.character(cutree(h.cluster , k = 3))
 k3data <- cbind(k3,clearbat19)
 k3all  <- cbind(k3,bat19)
 
-#///boxplot(k3data)
-
-boxplot(home_run ~ k3 , data = k3data)
-
-ggplot(k3data , aes(k3,home_run)) +
-  geom_boxplot(aes(fill = k3),notch = FALSE ) + ggtitle("home_run") + xlab("group")
-
-ggplot(k3data , aes(k3,total_stolen_base)) +
-  geom_boxplot(aes(fill = k3),notch = FALSE ) + ggtitle("total_stolen_base") + xlab("group")
-
-#可用來看各組變數分配的Cluster Profile
-ggparcoord(k3data , columns = 2:9 , groupColumn = 1 ) #在資料數多的情況下不好用
-
 #scatter plot matrix 整套
 {
   lower.cor  <- function(x,y){
@@ -88,15 +75,26 @@ ggparcoord(k3data , columns = 2:9 , groupColumn = 1 ) #在資料數多的情況�
   
 }
 
+#用散佈圖來判斷哪個變數可以畫盒鬚圖
+
+boxplot(home_run ~ k3 , data = k3data)
+
+ggplot(k3data , aes(k3,home_run)) +
+  geom_boxplot(aes(fill = k3),notch = FALSE ) + ggtitle("home_run") + xlab("group")
+
+ggplot(k3data , aes(k3,total_stolen_base)) +
+  geom_boxplot(aes(fill = k3),notch = FALSE ) + ggtitle("total_stolen_base") + xlab("group")
+
+#可用來看各組變數分配的Cluster Profile
+ggparcoord(k3data , columns = 2:9 , groupColumn = 1 ) #在資料數多的情況下不好用
+
 k3data %>%
   group_by(k3) %>%
   summarise(HR = mean(home_run), HRs = sd(home_run) , OBP = mean(on_base_percent) ,SB = mean(total_stolen_base) ,SBs = sd(total_stolen_base))
 
 k3data %>%
   group_by(k3) %>%
-  tally()
+  tally() #各組人數
 
 #結論:第一組為普通人，第二組很會轟，第三組很會盜
 
-print("2")
-edit online
