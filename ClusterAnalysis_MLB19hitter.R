@@ -1,4 +1,4 @@
-##### Package#####
+#####Package#####
 {
   library(dplyr)
   library(magrittr)
@@ -10,6 +10,7 @@
   library(corrgram)
   library(NbClust)
   library(stats)
+  library(gridExtra)
 }
 
 read.csv("C://RRR/19bat.csv",sep = "\t") -> bat19  #csv檔用Tab分隔的話，以\t輸入
@@ -18,7 +19,7 @@ head(bat19)
 clearbat19 <- bat19[,c(4,11,14,15,16,17,18,20)] #挑選要用的變數 #17(長打率),18(上壘率)可考慮拿掉
 #///c2bat19    <- bat19[,c(4,11,14,15,16,      20)]
 
-######建立敘述統計表格#####
+#####建立敘述統計表格#####
 {
   clearbat19.ds <- data.frame(min  = c(1:8) ,
                               max  = c(1:8) ,
@@ -31,13 +32,12 @@ clearbat19 <- bat19[,c(4,11,14,15,16,17,18,20)] #挑選要用的變數 #17(長�
   as.data.frame(apply(clearbat19,2,sd  )) %>% round(2) -> clearbat19.ds$sd
 }
 
-#####觀察共變數#####
+#####共變數與離群值#####
 corrgram(clearbat19)
 pairs(clearbat19) #///lower.panel = NULL
 #///corrgram(c2bat19) #拿掉17,18看起來比較好
 #可以考慮用因素分析來拿掉高度線性相關的變數
 
-#####馬哈蘭距離#####
 #用D^2來偵測outlier(會用到變異數和共變數)
 mh <- as.numeric(mahalanobis(clearbat19, colMeans(clearbat19), cov(clearbat19))) #以每個變數的平均數和共變矩陣為參數
 mh19 <- mutate(clearbat19,mh)
@@ -47,6 +47,7 @@ mh19 %>%
 
 df <- scale(clearbat19)
 
+#####先驗集群的存在#####
 #用Hopkins統計量來判斷集群是否明顯存在
 #見https://www.datanovia.com/en/lessons/assessing-clustering-tendency/
 #數值越大代表Data的分布跟Uniform分配相比，有較明顯的集群存在(若>0.75，則有90%的信心水準)
@@ -85,7 +86,7 @@ k3all  <- cbind(k3,bat19)
 hc2 <- agnes(E.dist, method = "ward")
 hc2$ac #agnes可以計算聚合係數(agglomerative coefficient)
 
-#####Stopping Rule#####
+#####分層式Stopping Rule#####
 stop_num <- NbClust(clearbat19, distance = "euclidean", method = "ward.D2", max.nc = 6, index = "all")
 stop_num
 #根據NbClust的數種Stopping Rule的Index顯示，3個分群應該是最好的選擇
@@ -114,7 +115,7 @@ stop_num
   
 }
 
-#####主成分分析#####
+#####後驗集群的存在(主成分分析)#####
 
 #用主成分分析的頭兩個主成分，來判斷集群分析是否有效，並且驗證分群結果的好壞
 fviz_pca_ind(prcomp(df), title = "PCA - clearbat19", palette = "jco",
@@ -130,6 +131,7 @@ fviz_cluster(list(data = df, cluster = km.res1$cluster),
 #(要跑很久)
 #///fviz_dend(hclust(dist(df)), k = 3, k_colors = "jco", as.ggplot = TRUE, show_labels = FALSE)
 
+#####圖型判斷#####
 #用散佈圖來判斷哪個變數可以畫盒鬚圖
 
 boxplot(home_run ~ k3 , data = k3data)
@@ -154,16 +156,46 @@ k3data %>%
 #分層式結論:第一組為普通人，第二組很會轟，第三組很會盜
 
 #####K-means#####
-km.bat <-kmeans( clearbat19 , centers = 3)
-km.bat #組間變異占總變異47.1%
+km.bat <-kmeans( clearbat19 , centers = 3 ,nstart = 25) #nstart可視為重新選中心點
+km.bat #組間變異占總變異48.6%
 km.bat$withinss #各組的組內變異
+km.bat$centers  #各組的組內中心
+
 fviz_cluster(km.bat,           
              data = clearbat19,              
              geom = c("point","text"), 
              frame.type = "norm") 
 
+#####嘗試不同分組數並繪圖#####
 
-#####調整組別#####
+{
+km2 <- kmeans(clearbat19, centers = 2, nstart = 25)
+km4 <- kmeans(clearbat19, centers = 4, nstart = 25)
+km5 <- kmeans(clearbat19, centers = 5, nstart = 25)
+#///km6 <- kmeans(clearbat19, centers = 6, nstart = 25)
+
+kmp2 <- fviz_cluster(km2, geom = "point",  data = clearbat19) + ggtitle("k = 2")
+kmp3 <- fviz_cluster(km.bat, geom = "point", data = clearbat19) + ggtitle("k = 3")
+kmp4 <- fviz_cluster(km4, geom = "point",  data = clearbat19) + ggtitle("k = 4")
+kmp5 <- fviz_cluster(km5, geom = "point",  data = clearbat19) + ggtitle("k = 5")
+#///kmp6 <- fviz_cluster(km6, geom = "point",  data = clearbat19) + ggtitle("k = 6")
+
+grid.arrange(kmp2,kmp3, kmp4, kmp5 , nrow = 2)
+}
+#就前兩項主成分來看，三組以上的分群並不直觀，
+#而第一主成分佔了40%的變異，第二主成分只有17%，分兩組會更明瞭
+
+#####K-means Stopping Rule#####
+fviz_nbclust(kmdata, 
+             FUNcluster = kmeans,   
+             method = "wss", 
+             k.max = 12) + 
+  labs(title="Elbow Method for K-Means") +
+  geom_vline(xintercept = 5,linetype = 2) #依照組內變異的法則，可以考慮分五群
+
+fviz_nbclust(kmdata, kmeans, method = "silhouette")
+
+#####調整組別(非必要)#####
 change_group <-function(x){
   if (x==1){ x = 2}
   else if (x==2){ x = 1}
@@ -187,7 +219,7 @@ upper.plot <- function(x,y){
 }
 pairs(kmdata, lower.panel = lower.cor , upper.panel = upper.plot )
 
-#####kmeans盒鬚圖#####
+#####kmeans圖型判斷#####
 boxplot(home_run ~ km , data = kmdata)
 
 #全壘打的組內差異更小了，代表分組的重要性變更大了
@@ -220,16 +252,10 @@ kmdata %>%
 kmdata %>%
   group_by(km) %>%
   tally() #各組人數
+#####Manova檢驗各組的變數#####
+kmmanova <- manova( cbind(age,home_run,k_percent,bb_percent,batting_avg,slg_percent,on_base_percent,total_stolen_base) ~ km ,
+                    data = kmdata )
+summary(kmmanova)     #整體F檢定顯著
+summary.aov(kmmanova) #除了年紀之外，其他變數的F檢定也顯著
 
-#Stopping Rule
-fviz_nbclust(kmdata, 
-             FUNcluster = kmeans,   
-             method = "wss", 
-             k.max = 12) + 
-labs(title="Elbow Method for K-Means") +
-geom_vline(xintercept = 5,linetype = 2) #可以考慮分五群 
 
-#####最後可以考慮用Manova來檢驗各組的變數是否有顯著不同#####
-reg <- lm( as.numeric(km) ~ .  , data = kmdata)
-summary(reg)
-#這邊用LPM，可以看到顯著的有全壘打、盜壘和被三振率
