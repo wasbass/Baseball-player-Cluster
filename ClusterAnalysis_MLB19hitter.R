@@ -195,14 +195,13 @@ fviz_nbclust(kmdata,
 
 fviz_nbclust(kmdata, kmeans, method = "silhouette")
 
-#####調整組別(非必要)#####
+#####組別比較與調整(非必要)#####
 change_group <-function(x){
   if (x==1){ x = 2}
   else if (x==2){ x = 1}
   else {x = x}
   return(x)
  }
-
 
 km <- km.bat$cluster
 km <- as.character(sapply(km,change_group))
@@ -211,8 +210,7 @@ kmdata <- cbind(km,clearbat19)
 compare_data <-cbind(k3,kmdata)
 
 groupdif <- compare_data[,1:2]
-table(groupdif) #平庸組的人更平庸，巨砲組的標準更嚴格，速度組差距不明顯
-
+table(groupdif) #大致相同
 
 upper.plot <- function(x,y){
   points( x , y , pch = 19 ,col = c("red","navyblue","darkgreen")[kmdata$km])  
@@ -222,25 +220,18 @@ pairs(kmdata, lower.panel = lower.cor , upper.panel = upper.plot )
 #####kmeans圖型判斷#####
 boxplot(home_run ~ km , data = kmdata)
 
-#全壘打的組內差異更小了，代表分組的重要性變更大了
+#全壘打的組內差異更小，但大致與分層式結果相符
 ggplot(kmdata , aes(km,home_run)) +
   geom_boxplot(aes(fill = km),notch = FALSE ) + ggtitle("home_run") + xlab("group")
 
 ggplot(k3data , aes(k3,home_run)) +
   geom_boxplot(aes(fill = k3),notch = FALSE ) + ggtitle("home_run") + xlab("group")
 
-
-#相較之下，第三組盜壘數的變異被放大了
-
 ggplot(kmdata , aes(km,total_stolen_base)) +
   geom_boxplot(aes(fill = km),notch = FALSE ) + ggtitle("total_stolen_base") + xlab("group")
 
 ggplot(k3data , aes(k3,total_stolen_base)) +
   geom_boxplot(aes(fill = k3),notch = FALSE ) + ggtitle("total_stolen_base") + xlab("group")
-
-#另外，被三振率似乎也有關係，但相較之下不太重要
-ggplot(kmdata , aes(km, k_percent)) +
-  geom_boxplot(aes(fill = km),notch = FALSE ) + ggtitle("k_percent") + xlab("group")
 
 #可用來看各組變數分配的Cluster Profile
 ggparcoord(kmdata , columns = 2:9 , groupColumn = 1 ) #在資料數多的情況下不好用
@@ -257,5 +248,3 @@ kmmanova <- manova( cbind(age,home_run,k_percent,bb_percent,batting_avg,slg_perc
                     data = kmdata )
 summary(kmmanova)     #整體F檢定顯著
 summary.aov(kmmanova) #除了年紀之外，其他變數的F檢定也顯著
-
-
