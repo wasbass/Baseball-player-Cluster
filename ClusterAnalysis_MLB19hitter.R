@@ -34,7 +34,7 @@ clearbat19 <- bat19[,c(4,11,14,15,16,17,18,20)] #挑選要用的變數 #17(長�
 #####觀察共變數#####
 corrgram(clearbat19)
 pairs(clearbat19) #///lower.panel = NULL
-corrgram(c2bat19) #拿掉17,18看起來比較好
+#///corrgram(c2bat19) #拿掉17,18看起來比較好
 #可以考慮用因素分析來拿掉高度線性相關的變數
 
 #####馬哈蘭距離#####
@@ -47,28 +47,12 @@ mh19 %>%
 
 df <- scale(clearbat19)
 
-#####主成分分析#####
-
-#用主成分分析的頭兩個主成分，來判斷集群分析是否有效，並且驗證分群結果的好壞
-fviz_pca_ind(prcomp(df), title = "PCA - clearbat19", palette = "jco",
-             geom = "point", ggtheme = theme_classic(), habillage = k3data$k3, #habillage可用來標色
-             legend = "bottom")
-
-#接著用k-means來觀察分類狀況
-km.res1 <- kmeans(df, 3)
-fviz_cluster(list(data = df, cluster = km.res1$cluster),
-             ellipse.type = "norm", geom = "point", stand = FALSE,
-             palette = "jco", ggtheme = theme_classic())
-
-#(要跑很久)
-#///fviz_dend(hclust(dist(df)), k = 3, k_colors = "jco", as.ggplot = TRUE, show_labels = FALSE)
-
 #用Hopkins統計量來判斷集群是否明顯存在
 #見https://www.datanovia.com/en/lessons/assessing-clustering-tendency/
 #數值越大代表Data的分布跟Uniform分配相比，有較明顯的集群存在(若>0.75，則有90%的信心水準)
 
 res = get_clust_tendency(df, n = 40, graph = TRUE) #n代表挑選的sample數量 
-res$hopkins_stat #為0.73，高於閥值0.4，可接受集群存在
+res$hopkins_stat #為0.73，高於閾值0.5，可接受集群存在
 
 #圖示判斷法
 bat.dist <- get_dist(clearbat19, stand = TRUE, method = "euclidean")
@@ -106,7 +90,6 @@ stop_num <- NbClust(clearbat19, distance = "euclidean", method = "ward.D2", max.
 stop_num
 #根據NbClust的數種Stopping Rule的Index顯示，3個分群應該是最好的選擇
 
-
 #scatter plot matrix 整套
 {
   lower.cor  <- function(x,y){
@@ -124,12 +107,28 @@ stop_num
   }
   
   upper.plot <- function(x,y){
-    points( x , y , pch = 19 ,col = c("red","navyblue","darkgreen")[kmdata$km])  #記得改
+    points( x , y , pch = 19 ,col = c("red","navyblue","darkgreen")[k3data$k3])  #記得改
   }
   
   pairs(k3data, lower.panel = lower.cor , upper.panel = upper.plot )
   
 }
+
+#####主成分分析#####
+
+#用主成分分析的頭兩個主成分，來判斷集群分析是否有效，並且驗證分群結果的好壞
+fviz_pca_ind(prcomp(df), title = "PCA - clearbat19", palette = "jco",
+             geom = "point", ggtheme = theme_classic(), habillage = k3data$k3, #habillage可用來標色
+             legend = "bottom")
+
+#接著用k-means來觀察分類狀況
+km.res1 <- kmeans(df, 3)
+fviz_cluster(list(data = df, cluster = km.res1$cluster),
+             ellipse.type = "norm", geom = "point", stand = FALSE,
+             palette = "jco", ggtheme = theme_classic())
+
+#(要跑很久)
+#///fviz_dend(hclust(dist(df)), k = 3, k_colors = "jco", as.ggplot = TRUE, show_labels = FALSE)
 
 #用散佈圖來判斷哪個變數可以畫盒鬚圖
 
@@ -170,7 +169,8 @@ change_group <-function(x){
   else if (x==2){ x = 1}
   else {x = x}
   return(x)
-}
+ }
+
 
 km <- km.bat$cluster
 km <- as.character(sapply(km,change_group))
@@ -179,8 +179,12 @@ kmdata <- cbind(km,clearbat19)
 compare_data <-cbind(k3,kmdata)
 
 groupdif <- compare_data[,1:2]
-table(groupdif) #平庸組的人更平庸，巨砲組更嚴格，速度組差距不明顯
+table(groupdif) #平庸組的人更平庸，巨砲組的標準更嚴格，速度組差距不明顯
 
+
+upper.plot <- function(x,y){
+  points( x , y , pch = 19 ,col = c("red","navyblue","darkgreen")[kmdata$km])  
+}
 pairs(kmdata, lower.panel = lower.cor , upper.panel = upper.plot )
 
 #####kmeans盒鬚圖#####
@@ -225,7 +229,7 @@ fviz_nbclust(kmdata,
 labs(title="Elbow Method for K-Means") +
 geom_vline(xintercept = 5,linetype = 2) #可以考慮分五群 
 
-#####最後可以考慮用Manova來檢驗各組的參數是否有顯著不同#####
+#####最後可以考慮用Manova來檢驗各組的變數是否有顯著不同#####
 reg <- lm( as.numeric(km) ~ .  , data = kmdata)
 summary(reg)
 #這邊用LPM，可以看到顯著的有全壘打、盜壘和被三振率
