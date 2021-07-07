@@ -69,7 +69,6 @@ order(bat.dist) %>%
 
 head(bat.dist)
 
-
 #####分層式集群分析#####
 E.dist <- dist(clearbat19,method = "euclidean") #這邊用歐式距離當標準，也可以用manhattan等方法
 h.cluster <- hclust(E.dist , method = "ward.D2") #也可以用其他方法，像是最小距離、平均距離等
