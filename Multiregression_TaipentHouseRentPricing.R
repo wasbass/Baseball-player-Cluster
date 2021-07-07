@@ -30,7 +30,6 @@ cor(tp$area,tp$neighbor)
 corrgram(tp)
 #看起來area,rent,parkingspace要取對數比較好
 
-
 #####變數變換#####
 tpln <- cbind(log(taipeirent[c("rent","area")]),taipeirent[c("floor","height")])
 tpln <- cbind(tpln,log(taipeirent$parkingspace+1),taipeirent["neighbor"])
